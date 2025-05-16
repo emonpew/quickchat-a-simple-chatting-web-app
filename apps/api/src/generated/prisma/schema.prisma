@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String // Always store hashed passwords
+  createdAt DateTime @default(now())
+
+  // Relationships
+  sentMessages     Message[]  @relation("SentMessages")
+  receivedMessages Message[]  @relation("ReceivedMessages")
+  chatRoomsUser1   ChatRoom[] @relation("ChatRoomUser1")
+  chatRoomsUser2   ChatRoom[] @relation("ChatRoomUser2")
+}
+
+model ChatRoom {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships (1:1 chat between 2 users)
+  user1    User      @relation("ChatRoomUser1", fields: [user1Id], references: [id])
+  user1Id  Int
+  user2    User      @relation("ChatRoomUser2", fields: [user2Id], references: [id])
+  user2Id  Int
+  messages Message[]
+
+  // Ensure only one chat room exists per user pair
+  @@unique([user1Id, user2Id])
+}
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+
+  // Relationships
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  senderId   Int
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  receiverId Int
+  room       ChatRoom @relation(fields: [roomId], references: [id])
+  roomId     Int
+}
