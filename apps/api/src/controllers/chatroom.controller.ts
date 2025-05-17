@@ -1,4 +1,5 @@
 import ResponseService from "@/services/response.service";
+import wsService from "@/services/ws.service";
 import prisma from "@/utils/prisma";
 import { Request, Response } from "express";
 
@@ -24,7 +25,7 @@ export const getAllRooms = async (req: Request, res: Response) => {
         id: val.id,
         username:
           userId == val.user1Id ? val.user2.username : val.user1.username,
-        lastmsg: val.messages.length != 0 ? val.messages[0] : "",
+        lastmsg: val.messages.length != 0 ? val.messages[0].content : "",
       };
     });
     return res.json(rooms);
@@ -78,12 +79,42 @@ export const createChatRoom = async (req: Request, res: Response) => {
       );
     }
     const senderId = req.user!.id;
-    await prisma.chatRoom.create({
+    const senderName = req.user!.username;
+    const room = await prisma.chatRoom.create({
       data: {
         user1Id: senderId,
         user2Id: recieverId,
       },
+      include: {
+        user2: true,
+      },
     });
+    const msgToSender = {
+      id: room.id,
+      lastmsg: "",
+      username: room.user2.username,
+    };
+    const msgToReciever = {
+      id: room.id,
+      lastmsg: "",
+      username: senderName,
+    };
+    wsService.sendToUser(
+      senderId,
+      JSON.stringify({
+        type: "chatroom_add",
+        payload: msgToSender,
+      })
+    );
+
+    wsService.sendToUser(
+      recieverId,
+      JSON.stringify({
+        type: "chatroom_add",
+        payload: msgToReciever,
+      })
+    );
+
     return ResponseService.created(res, "chatroom");
   } catch (error: any) {
     return ResponseService.internalServerError(res);

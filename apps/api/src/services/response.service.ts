@@ -1,5 +1,6 @@
 // src/services/response.service.ts
 import { Response } from "express";
+import { WebSocket } from "ws";
 
 class ResponseService {
   // Successful Responses
@@ -121,6 +122,21 @@ class ResponseService {
       code: 500,
       message,
     });
+  }
+
+  static wsError(error: unknown, ws: WebSocket) {
+    console.error("Message handling error:", error);
+    ws.send(
+      JSON.stringify({
+        type: "error",
+        payload: {
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to process message",
+        },
+      })
+    );
   }
 }
 

@@ -4,6 +4,7 @@ import prisma from "@/utils/prisma";
 import { ChatMessagePayload, TypingIndicatorPayload } from "@/types/socket";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "@/utils/config";
+import ResponseService from "@/services/response.service";
 
 // Environment variables
 
@@ -57,18 +58,7 @@ export const handleChatMessage = async (
 
     wsService.broadcastToRoom(room.id, message.content, [message.senderId]);
   } catch (error) {
-    console.error("Message handling error:", error);
-    ws.send(
-      JSON.stringify({
-        type: "error",
-        payload: {
-          message:
-            error instanceof Error
-              ? error.message
-              : "Failed to process message",
-        },
-      })
-    );
+    ResponseService.wsError(error, ws);
   }
 };
 
@@ -107,6 +97,6 @@ export const handleTypingIndicator = async (
       })[senderId] // Exclude the sender from receiving their own typing indicator
     );
   } catch (error) {
-    console.error("Typing indicator error:", error);
+    ResponseService.wsError(error, ws);
   }
 };

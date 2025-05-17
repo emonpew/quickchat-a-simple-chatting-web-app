@@ -11,10 +11,11 @@ import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "./utils/config";
 import wsService from "./services/ws.service";
 import { getUsers } from "./controllers/user.controller";
+import { authenticate as authenticateMiddleware } from "./middlewares/auth.middleware";
 
-function authenticate(req: http.IncomingMessage) {
+function authenticate(token: string) {
   try {
-    const token = req.headers.authorization?.replace("Bearer ", "");
+    // const token = req.headers.authorization?.replace("Bearer ", "");
     if (!token) {
       return;
     }
@@ -46,12 +47,18 @@ export const createServer = () => {
 
   app.use("/auth", authRoute);
   app.use("/chatroom", chatRoute);
-  app.get("/user", (req, res) => {
+  app.get("/user", authenticateMiddleware, (req, res) => {
     getUsers(req, res);
   });
 
   wss.on("connection", (ws, req) => {
-    const userId = authenticate(req);
+    const url = new URL(req.url!, `http://${req.headers.host}`);
+    const token = url.searchParams.get("token");
+    if (!token) {
+      ws.close(1008, "Authentication token required");
+      return;
+    }
+    const userId = authenticate(token);
     if (!userId) {
       ws.close();
       return;

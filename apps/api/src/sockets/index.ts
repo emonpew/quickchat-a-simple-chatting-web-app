@@ -2,7 +2,7 @@ import WebSocket from "ws";
 import { handleChatMessage, handleTypingIndicator } from "./events/chat.event";
 
 type WSEvent = {
-  type: "message" | "typing" | "user_online";
+  type: "message" | "typing" | "user_online" | "ping";
   payload: any;
 };
 
@@ -15,6 +15,10 @@ export const wsRouter = (ws: WebSocket, message: string, senderId: number) => {
       break;
     case "typing":
       handleTypingIndicator(ws, event.payload, senderId);
+      break;
+    case "ping":
+      ws.send(JSON.stringify({ type: "pong" }));
+      console.log("pong");
       break;
     default:
       console.warn(`Unknown event type: ${event.type}`);
